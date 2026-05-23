@@ -1,0 +1,36 @@
+name: CI/CD Police Engine Platform Production Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout repository source code
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Node.js workspace environment
+        uses: actions/setup-node@v4
+        with:
+          node-rate: '24'
+          cache: 'npm'
+          cache-dependency-path: policy-engine-service/package-lock.json
+
+      - name: 3. Install dependencies & run unit tests
+        run: |
+          cd policy-engine-service
+          npm ci
+          DATABASE_URL="postgresql://fake:fake@localhost:5432/fake" npx prisma generate
+          npm run test
+
+      - name: 4. Set up Docker Buildx compiler
+        uses: docker/setup-buildx-action@v3
+
+      # Сюда в будущем прописывается авторизация в Yandex Cloud (yc-cli) и push образов
+      - name: 5. Simulate Production Container Compilation
+        run: |
+          cd policy-engine-service
+          docker build -t policy-engine-service:latest .

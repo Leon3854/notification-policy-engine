@@ -1,3 +1,4 @@
+
 # Тестовое задание: Notification Preferences Service
 
 **Стек**: TypeScript, Node.js, PostgreSQL  
