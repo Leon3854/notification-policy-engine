@@ -11,15 +11,20 @@ datasource db {
 }
 
 model UserPreference {
-  id               String     @id @default(uuid())
-	createdAt        DateTime   @default(now()) @map("created_at")
-  updatedAt        DateTime   @updatedAt @map("updated_at")
-  userId           String     @unique
-  region           String     // Например: "EU", "US", "RU"
-  timezone         String     // Например: "Europe/Paris", "America/New_York", "Europe/Moscow"
-  emailEnabled     Boolean    @default(true)
-  smsEnabled       Boolean    @default(true)
-  pushEnabled      Boolean    @default(true)
-  quietHoursStart  Int        // Часы начала тишины (например, 22)
-  quietHoursEnd    Int        // Часы конца тишины (например, 8)
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  region           String   // "EU", "US", "RU"
+  timezone         String   // "Europe/Paris", "America/New_York", "Europe/Moscow"
+  marketingEmail   Boolean  @default(true)
+  marketingPush    Boolean  @default(true)
+  transactionalSms Boolean  @default(true)
+  
+  // Часы тишины (Quiet Hours) в локальном времени пользователя (например, с 22 до 8)
+  quietHoursStart  Int      @default(22)
+  quietHoursEnd    Int      @default(8)
+  
+  createdAt DateTime @default("2026-01-01T00:00:00Z") @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("user_preferences")
 }

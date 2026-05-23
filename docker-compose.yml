@@ -1,7 +1,7 @@
 services:
   policy-service:
     build:
-      context: ./apps/policy-service 
+      context: ./apps/policy-engine
       dockerfile: Dockerfile
       args:
         - DATABASE_URL=${DATABASE_URL}

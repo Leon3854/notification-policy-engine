@@ -8,13 +8,17 @@ ENV DATABASE_URL=$DATABASE_URL
 COPY package*.json ./
 RUN npm ci
 
-# Копируем prisma schema и генерируем клиент ДО копирования всего проекта
-# Это закэширует слой, если schema.prisma не меняется
-COPY prisma ./prisma
-RUN npx prisma generate
+
 
 # Теперь копируем остальной код
 COPY . .
+
+# Копируем prisma schema и генерируем клиент ДО копирования всего проекта
+# Это закэширует слой, если schema.prisma не меняется
+COPY prisma ./prisma
+# RUN npx prisma generate
+RUN DATABASE_URL=postgresql://fake:fake@localhost:5432/fake npx prisma generate
+
 
 # Собираем TypeScript
 RUN npm run build
