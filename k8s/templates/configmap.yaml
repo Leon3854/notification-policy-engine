@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: policyEngine-shared-config
+  labels:
+    app.kubernetes.io/managed-by: Helm
+data:
+  NODE_ENV: "production"
+	DATABASE_URL=youre://youre:123456@policy_engine-db:5432/policy-engine_db
+  REDIS_URL: "redis://redis-service:6379"
+  RABBITMQ_URL: "amqp://guest:guest@rabbitmq-service:5672"

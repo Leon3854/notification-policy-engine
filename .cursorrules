@@ -1,0 +1,38 @@
+# AI Context & Instructions for Telegram-API Project
+
+## 1. Project Overview
+Это микросервисная система уведомлений на NestJS.
+- **Name Service **: API-шлюз (порт 3000), принимает HTTP POST GET UPDATE DELETE и пушит в RabbitMQ.
+
+
+## 2. Core Tech Stack
+- NestJS (Microservices)
+- RabbitMQ (Transport)
+- Redis (Idempotency Lock)
+- Swagger (Documentation)
+- Jest (Unit Testing)
+
+## 3. Architecture Rules (Критично)
+- **Manual Acknowledgement**: ВСЕГДА использовать `noAck: false`. Сообщение подтверждается (`ack`) ТОЛЬКО после успешной записи в БД.
+- **Idempotency First**: Перед любой операцией в Stock Service ОБЯЗАТЕЛЬНО проверить `messageId` в Redis (команда SET NX). Если ID существует — пропускаем обработку и шлем `ack`.
+- **Publisher Confirms**: Продюсер должен ждать подтверждения от RabbitMQ перед ответом клиенту.
+- **DTO Validation**: Все входящие данные должны проходить через `ValidationPipe`. Поле `messageId` (UUID) — обязательное.
+
+## 4. Error Handling & Retries
+- **Retry Strategy**: При ошибке соединения с RabbitMQ использовать `amqp-connection-manager` для автоматического переподключения.
+- **DLX (Dead Letter Exchange)**: Если сообщение не может быть обработано после 3-х попыток, оно должно быть перенаправлено в `dlx_queue`.
+
+## 5. POSTGRESQL & PRISMA CONTEXT
+- NEVER use custom 'output = "client"' in schema.prisma. Always use the default location.
+- EVERY PrismaClient import must be strictly standard: "import { PrismaClient } from '@prisma/client'".
+- All heavy database state shifts and status migrations MUST be designed using pure raw SQL chunks via "$queryRaw" or "$executeRaw" to ensure tight transaction indexing and bypass ORM abstractions.
+- Enforce strict pessimistic locking using "SELECT ... FOR UPDATE" for all currency/inventory operations against Race Conditions.
+
+## 6. INFRASTRUCTURE & DOCKER TOPOLOGY
+- All Dockerfiles must remain single-stage or explicitly map correct compilation paths inside Linux.
+- NEVER mounts local 'dist' or 'node_modules' directories from host through volumes in docker-compose for production profiles.
+- Entrypoint execution commands must run binary compiled JS directly: "node dist/src/main.js" or "node dist/main.js" according to NestJS compiler footprint.
+
+## 7. KUBERNETES & HELM DEPLOYMENT
+- All charts must utilize clean Umbrella architecture patterns.
+- Global range loops must use standard Go-template context evaluation: "{{- range $serviceName, $serviceConfig := .Values }}".

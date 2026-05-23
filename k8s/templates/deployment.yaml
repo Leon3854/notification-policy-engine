@@ -1,0 +1,32 @@
+{{- range $serviceName, $serviceConfig := .Values }}
+{{- if and (kindIs "map" $serviceConfig) $serviceConfig.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $serviceName }}
+  labels:
+    app: {{ $serviceName }}
+spec:
+  replicas: {{ $serviceConfig.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ $serviceName }}
+  template:
+    metadata:
+      labels:
+        app: {{ $serviceName }}
+    spec:
+      containers:
+        - name: {{ $serviceName }}
+          image: "{{ $serviceConfig.image.repository }}:{{ $serviceConfig.image.tag }}"
+          imagePullPolicy: {{ $serviceConfig.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - containerPort: {{ $serviceConfig.service.port }}
+          envFrom:
+            - configMapRef:
+                name: thebox-shared-config
+          resources:
+            {{- toYaml $serviceConfig.resources | nindent 12 }}
+{{- end }}
+{{- end }}
