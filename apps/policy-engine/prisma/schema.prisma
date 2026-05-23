@@ -1,0 +1,25 @@
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model UserPreference {
+  id               String     @id @default(uuid())
+	createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+  userId           String     @unique
+  region           String     // Например: "EU", "US", "RU"
+  timezone         String     // Например: "Europe/Paris", "America/New_York", "Europe/Moscow"
+  emailEnabled     Boolean    @default(true)
+  smsEnabled       Boolean    @default(true)
+  pushEnabled      Boolean    @default(true)
+  quietHoursStart  Int        // Часы начала тишины (например, 22)
+  quietHoursEnd    Int        // Часы конца тишины (например, 8)
+}
