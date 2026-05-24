@@ -1,20 +1,15 @@
-import { INestApplication, OnModuleInit } from "@nestjs/common";
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { PrismaClient } from '../prisma/client/index.js';
+import { PrismaPg } from '@prisma/adapter-pg';
 
-export class PrismaService extends PrismaClient implements OnModuleInit {
+@Injectable()
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor() {
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+    const adapter = new PrismaPg({
+      connectionString: process.env.DATABASE_URL!,
     });
-
-    const adapter = new PrismaPg(pool);
-
-    super({
-      adapter,
-      log: ['query', 'info', 'warn', 'error'],
-    });
+    
+    super({ adapter });
   }
 
   async onModuleInit() {

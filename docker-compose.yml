@@ -1,5 +1,5 @@
 services:
-  policy-service:
+  policy-engine:
     build:
       context: ./apps/policy-engine
       dockerfile: Dockerfile
