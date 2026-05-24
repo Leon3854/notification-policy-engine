@@ -1,21 +1,53 @@
-FROM node:24-alpine AS builder
+FROM node:24-alpine
+
 WORKDIR /app
+
+# Устанавливаем NestJS CLI глобально
+RUN npm install -g @nestjs/cli
+
+# Копируем файлы зависимостей
 COPY package*.json ./
 RUN npm ci
 
-# 1. Сначала копируем схему
-COPY prisma ./prisma/
+# Копируем Prisma файлы
+COPY prisma ./prisma
+COPY prisma.config.ts ./
 
-# 2. Генерируем типы по твоему кастомному пути, чтобы папка prisma/client наполнилась файлами index.js
-RUN DATABASE_URL="postgresql://fake:fake@localhost:5432/fake" npx prisma generate
+# Генерируем Prisma Client
+RUN npx prisma generate --config=prisma.config.ts
 
-# 3. Копируем остальной исходный код (включая наши новые импорты @prisma-custom)
+# Копируем исходники
 COPY . .
 
-# 4. Запускаем сборку! Теперь nodenext состыкует алиас с index.js идеально!
+# Собираем приложение
 RUN npm run build
 
-CMD ["node", "dist/src/main.js"]
+# Копируем сгенерированный клиент в dist
+RUN cp -r prisma dist/prisma
+
+EXPOSE 3000
+
+CMD ["node", "dist/src/main"]
+
+
+# FROM node:24-alpine AS builder
+# WORKDIR /app
+# COPY package*.json ./
+# RUN npm ci
+
+# # 1. Сначала копируем схему
+# COPY prisma ./prisma/
+
+# # 2. Генерируем типы по твоему кастомному пути, чтобы папка prisma/client наполнилась файлами index.js
+# RUN DATABASE_URL="postgresql://fake:fake@localhost:5432/fake" npx prisma generate
+
+# # 3. Копируем остальной исходный код (включая наши новые импорты @prisma-custom)
+# COPY . .
+
+# # 4. Запускаем сборку! Теперь nodenext состыкует алиас с index.js идеально!
+# RUN npm run build
+
+# CMD ["node", "dist/src/main.js"]
 
 
 # FROM node:20-alpine

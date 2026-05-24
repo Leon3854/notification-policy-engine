@@ -1,8 +1,8 @@
 import { ConflictException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UserPreference } from '../../prisma/client/index.js'; 
-import { PrismaService } from 'src/prisma.service';
-import { RedisService } from 'provider/redis/redis.service';
+import { PrismaService } from '../prisma.service';
+import { RedisService } from '../../provider/redis/redis.service';
 
 
 export interface EvaluateResponse {
@@ -43,6 +43,7 @@ export class MessageService {
     if (dto.region === 'EU' && dto.notificationType.startsWith('marketing') && dto.channel === 'sms') {
       return { decision: 'deny', reason: 'blocked_by_global_policy' };
     }
+
 
     // 3. ПОЛУЧАЕМ НАСТРОЙКИ ИЗ POSTGRESQL ИЛИ ПРИМЕНЯЕМ ДЕФОЛТ (Требование ТЗ)
     // Явно указываем тип UserPreference или null для компилятора
@@ -109,9 +110,10 @@ export class MessageService {
         isQuietHours = localHour >= start && localHour < end;
       }
 
-      if (isQuietHours) {
-        return { decision: 'deny', reason: 'blocked_by_quiet_hours' };
-      }
+			// В методе evaluateNotification, перед проверкой quiet hours добавляем:
+			if (dto.notificationType.startsWith('marketing') && isQuietHours) {
+				return { decision: 'deny', reason: 'blocked_by_quiet_hours' };
+			}
 
     } catch (err) {
       this.logger.error(`Ошибка парсинга таймзоны для региона ${activePreference.timezone}`, err);
