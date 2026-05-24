@@ -4,7 +4,7 @@ services:
       context: ./apps/policy-engine
       dockerfile: Dockerfile
       args:
-        - DATABASE_URL=${DATABASE_URL}
+        - DATABASE_URL=postgresql://postgres:123456@policy_engine-db:5432/policy-engine_db?schema=public
     command: node dist/src/main.js
     env_file: .env
     environment:

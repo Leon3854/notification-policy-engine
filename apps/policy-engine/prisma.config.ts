@@ -12,6 +12,16 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: env("DATABASE_URL"),
+    url: "postgresql://postgres:123456@policy_engine-db:5432/policy-engine_db?schema=public",
   },
 });
+
+// export default defineConfig({
+//   schema: "./prisma/schema.prisma",
+//   migrations: {
+//     path: "prisma/migrations",
+//   },
+//   datasource: {
+//     url: env("DATABASE_URL"),
+//   },
+// });
