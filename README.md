@@ -72,14 +72,15 @@ npx jest src/message/message.service.spec.ts
   		<img src="./tests-unit.png" alt="Результат выполнения команды из корня сервиса" width="600"/>
    </p>
 Красная строка в логах — это не ошибка теста, а ожидаемый лог от одного из тестов, который специально проверяет обработку некорректной таймзоны:
-```bash
-ERROR [MessageService] Ошибка парсинга таймзоны для региона Invalid/Timezone
-```
+<br/>
+
+> ERROR [MessageService] Ошибка парсинга таймзоны для региона Invalid/Timezone
+<br/>
 Это тест "Должен обработать ошибку таймзоны и очистить ключ идемпотентности" — он специально передаёт Invalid/Timezone и проверяет, что сервис корректно обрабатывает эту ошибку. Всё работает как задумано!
-```bash
-Test Suites: 3 passed, 3 total
-Tests:       15 passed, 15 total
-```
+<br/>
+> Test Suites: 3 passed, 3 total<br/>
+> Tests:       15 passed, 15 total<br/>
+
 
 ### Что, доработать (на будущее):
 
