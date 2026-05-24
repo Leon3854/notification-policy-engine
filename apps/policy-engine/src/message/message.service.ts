@@ -1,8 +1,20 @@
 import { ConflictException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { CreateMessageDto } from './dto/create-message.dto';
-import { UpdateMessageDto } from './dto/update-message.dto';
+import { UserPreference } from '../../prisma/client/index.js'; 
 import { PrismaService } from 'src/prisma.service';
 import { RedisService } from 'provider/redis/redis.service';
+
+
+export interface EvaluateResponse {
+  decision: 'allow' | 'deny'; // Жесткие литеральные типы, никаких случайных строк!
+  reason: string;
+  meta?: {
+    localHour: number;
+    timezone: string;
+  };
+}
+
+
 
 @Injectable()
 export class MessageService {
@@ -13,7 +25,12 @@ export class MessageService {
 		private readonly redis: RedisService
 	){}
 
-	async evaluateNotification(dto: CreateMessageDto, messageId: string) {
+	/**
+   * @description Оценка политик уведомлений с защитой от атак и проверкой таймзон
+   * @param dto - Входные валидированные данные по твоим регуляркам
+   * @param messageId - UUID пакета из заголовка для укрощения Race Condition
+   */
+	async evaluateNotification(dto: CreateMessageDto, messageId: string): Promise<EvaluateResponse> {
     this.logger.log(`Evaluating notification policy for user: ${dto.userId}`);
 
     // 1. ИДЕМПОТЕНТНОСТЬ (Ключ message:UUID в Redis)
@@ -28,35 +45,42 @@ export class MessageService {
     }
 
     // 3. ПОЛУЧАЕМ НАСТРОЙКИ ИЗ POSTGRESQL ИЛИ ПРИМЕНЯЕМ ДЕФОЛТ (Требование ТЗ)
-    let preference = await this.prisma.userPreference.findUnique({
+    // Явно указываем тип UserPreference или null для компилятора
+    let preference: UserPreference | null = await this.prisma.userPreference.findUnique({
       where: { userId: dto.userId },
     });
 
+    // ЖЕСТКИЙ СЕНЬОРСКИЙ ФИКС: Если в базе Postgres пусто, создаем полный объект, 
+    // чтобы TypeScript никогда больше не ругался на 'preference is possibly null'
+    let activePreference: UserPreference;
+
     if (!preference) {
       this.logger.log(`User ${dto.userId} not found, applying default system preferences`);
-      preference = {
-        id: 'default',
+      activePreference = {
+        id: 'default-id',
         userId: dto.userId,
         region: dto.region,
         timezone: dto.region === 'EU' ? 'Europe/Paris' : dto.region === 'US' ? 'America/New_York' : 'Europe/Moscow',
-        emailEnabled: true,
-        smsEnabled: true,
-        pushEnabled: true,
+        marketingEmail: true,
+        marketingPush: true,
+        transactionalSms: true,
         quietHoursStart: 22,
         quietHoursEnd: 8,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
+    } else {
+      activePreference = preference;
     }
 
-    // 4. ПРОВЕРКА КАНАЛОВ СВЯЗИ (аккуратные доменные поля)
-    if (dto.channel === 'email' && !preference.emailEnabled) {
+    // 4. ПРОВЕРКА КАНАЛОВ СВЯЗИ (доменные поля, завязанные на схему)
+    if (dto.channel === 'email' && dto.notificationType === 'marketing_email' && !activePreference.marketingEmail) {
       return { decision: 'deny', reason: 'blocked_by_user_preferences' };
     }
-    if (dto.channel === 'sms' && !preference.smsEnabled) {
+    if (dto.channel === 'push' && dto.notificationType === 'marketing_push' && !activePreference.marketingPush) {
       return { decision: 'deny', reason: 'blocked_by_user_preferences' };
     }
-    if (dto.channel === 'push' && !preference.pushEnabled) {
+    if (dto.channel === 'sms' && dto.notificationType === 'transactional_sms' && !activePreference.transactionalSms) {
       return { decision: 'deny', reason: 'blocked_by_user_preferences' };
     }
 
@@ -65,16 +89,16 @@ export class MessageService {
       const utcDate = new Date(dto.datetime);
       
       const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: preference.timezone,
+        timeZone: activePreference.timezone,
         hour: 'numeric',
         hour12: false,
       });
       
       const localHour = parseInt(formatter.format(utcDate), 10);
-      this.logger.log(`UTC: ${dto.datetime} | Timezone: ${preference.timezone} | Local Hour: ${localHour}`);
+      this.logger.log(`UTC: ${dto.datetime} | Timezone: ${activePreference.timezone} | Local Hour: ${localHour}`);
 
-      const start = preference.quietHoursStart;
-      const end = preference.quietHoursEnd;
+      const start = activePreference.quietHoursStart;
+      const end = activePreference.quietHoursEnd;
 
       let isQuietHours = false;
       if (start > end) {
@@ -90,13 +114,13 @@ export class MessageService {
       }
 
     } catch (err) {
-      this.logger.error(`Ошибка парсинга таймзоны для региона ${preference.timezone}`, err);
-      // Если таймзона кривая — откатываем замок в Redis, чтобы не лочить запросы
+      this.logger.error(`Ошибка парсинга таймзоны для региона ${activePreference.timezone}`, err);
+      // Если таймзона кривая — откатываем замок в Redis, чтобы не лочить последующие запросы
       await this.redis.deleteIdempotencyKey(messageId);
       throw new InternalServerErrorException('Ошибка обработки временных параметров политики');
     }
 
-    // ВСЕ ПОЛИТИКИ ПРОЙДЕНЫ
+    // ВСЕ ПОЛИТИКИ ПРОЙДЕНЫ УСПЕШНО
     return { decision: 'allow', reason: 'all_policies_passed' };
   }
 }

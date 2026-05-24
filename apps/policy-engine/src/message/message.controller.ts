@@ -1,28 +1,20 @@
 import { Body, Controller, Post, Headers, BadRequestException, Get, Param} from '@nestjs/common';
-import { MessageService } from './message.service';
+import { MessageService, EvaluateResponse } from './message.service';
 import { CreateMessageDto } from './dto/create-message.dto';
-import { UpdateMessageDto } from './dto/update-message.dto';
 import { PrismaService } from 'src/prisma.service';
 
-@Controller('message')
+
+
+
+@Controller('messages')
 export class MessageController {
-  constructor(private readonly messageService: MessageService,
+  constructor(
+		private readonly messageService: MessageService,
 		private readonly prisma: PrismaService
 	) {}
 
-  // 1. Проверка возможности отправки уведомления
-  @Post('evaluate')
-  async evaluate(
-    @Body() body: any,
-    @Headers('x-message-id') messageId: string, // Передаем UUID для проверки идемпотентности в Redis
-  ) {
-    if (!messageId) {
-      throw new BadRequestException('Заголовок x-message-id обязателен для контроля идемпотентности запросов.');
-    }
-    return this.messageService.evaluateNotification(body, messageId);
-  }
-
-  // 2. Получение предпочтений конкретного пользователя
+  
+  // 1. Получение предпочтений конкретного пользователя
   @Get('users/:id/preferences')
   async getPreferences(@Param('id') userId: string) {
     const preference = await this.prisma.userPreference.findUnique({
@@ -34,6 +26,18 @@ export class MessageController {
     return preference;
   }
 
+	// 2. Проверка возможности отправки уведомления
+  @Post('evaluate')
+  async evaluate(
+    @Body() createMessageDto: CreateMessageDto,
+    @Headers('x-message-id') messageId: string,
+  ): Promise<EvaluateResponse> {
+    if (!messageId) {
+      throw new BadRequestException('Заголовок x-message-id обязателен для контроля идемпотентности.');
+    }
+    return this.messageService.evaluateNotification(createMessageDto, messageId);
+  }
+
   // 3. Изменение или создание настроек пользователя (Upsert)
   @Post('users/:id/preferences')
   async updatePreferences(@Param('id') userId: string, @Body() body: any) {
@@ -42,9 +46,9 @@ export class MessageController {
       update: {
         region: body.region,
         timezone: body.timezone,
-        emailEnabled: body.emailEnabled ?? true,
-        smsEnabled: body.smsEnabled ?? true,
-        pushEnabled: body.pushEnabled ?? true,
+        marketingEmail: body.marketingEmail ?? true,
+        marketingPush: body.marketingPush ?? true,
+        transactionalSms: body.transactionalSms ?? true,
         quietHoursStart: body.quietHoursStart ?? 22,
         quietHoursEnd: body.quietHoursEnd ?? 8,
       },
@@ -52,9 +56,9 @@ export class MessageController {
         userId,
         region: body.region,
         timezone: body.timezone,
-        emailEnabled: body.emailEnabled ?? true,
-        smsEnabled: body.smsEnabled ?? true,
-        pushEnabled: body.pushEnabled ?? true,
+        marketingEmail: body.marketingEmail ?? true,
+        marketingPush: body.marketingPush ?? true,
+        transactionalSms: body.transactionalSms ?? true,
         quietHoursStart: body.quietHoursStart ?? 22,
         quietHoursEnd: body.quietHoursEnd ?? 8,
       },
