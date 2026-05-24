@@ -21,3 +21,7 @@
    docker-compose up -d --build
    ```
    **результат выполнения команды**
+
+   <p align="center">
+  		<img src="./root-dock.png" alt="Результат выполнения команды из корня" width="600"/>
+   </p>
