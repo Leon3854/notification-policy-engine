@@ -78,6 +78,7 @@ npx jest src/message/message.service.spec.ts
 <br/>
 Это тест "Должен обработать ошибку таймзоны и очистить ключ идемпотентности" — он специально передаёт Invalid/Timezone и проверяет, что сервис корректно обрабатывает эту ошибку. Всё работает как задумано!
 <br/>
+
 > Test Suites: 3 passed, 3 total<br/>
 > Tests:       15 passed, 15 total<br/>
 
