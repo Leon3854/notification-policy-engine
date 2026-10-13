@@ -55,3 +55,6 @@ venv/
 
 read.policy-engine.md
 read.policy-engine.txt
+# Legacy env names (keep ignored)
+.env.you
+.yourEnv

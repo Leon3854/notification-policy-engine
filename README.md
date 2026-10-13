@@ -1,85 +1,79 @@
+# Notification Policy Engine
 
-# Движок политик уведомлений
+Микросервис политик уведомлений с учётом часовых поясов: сообщения доставляются только в разрешённое время региона получателя.
 
-Это полноценный рабочий микросервис: 
-> работа с часовыми поясами (таймзоны),<br/> 
-> глобальные политики блокировок,<br/> 
-> логирование (Observability), <br/>
-> идемпотентность и полное покрытие тестами.<br/>
-	
-**Главный фокус — на <u>качестве архитектуры</u>, типов, бизнес‑логики... Docker приветствуется... Форматы можно менять.**
+![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?style=for-the-badge&logo=nestjs)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)
+![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?style=for-the-badge&logo=prisma)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?style=for-the-badge&logo=postgresql)
+![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3.12-FF6600?style=for-the-badge&logo=rabbitmq)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker)
 
+## Что это
 
-## В чем суть задания? - В таймзонах 
+Сервис решает задачу таймзон: пользователь в Париже или Москве получает уведомление с учётом своего региона и только в разрешённое локальное время. Логика переиспользуется в любых системах, где нужны уведомления по расписанию — платежи, рассылки, алерты.
 
-Надо решить проблему часовых поясов для того чтобы пользователь живущий в Париже или жителя Москвы сообщение приходло с учетом времени по его региону. Простыми словами сообщения должны приходить с учетом часового пояса, в разрешенное время.
+## Возможности
 
-Логика что была исользована в самом сервисе имее большой потенциал в работе ее можно будет использовать в различных сервисах где нужны будут уведомления. Прекрасно подойдет для платежного сервиса и не только.
+- **Политики по часовым поясам** — расчёт разрешённого окна доставки по региону
+- **Глобальные политики блокировок**
+- **Идемпотентность** через Redis
+- **Observability** — логирование и трассировка
+- **Полное покрытие тестами** (15 unit-тестов)
 
-## Запуск сервиса:
+## Стек
 
-1. В корне проекта находится файл окружения переименуйте его **.yourEnv** в **.env** и пропишите свои вводные
-2. ```bash
-   docker-compose up -d --build
-   ```
-   Для чего эта команда: Для запуска всего приложения через одну команду
-   
-   **результат выполнения команды из корня репозитрия**
+NestJS · TypeScript · Prisma · PostgreSQL · Redis · RabbitMQ · Docker Compose · Kubernetes-манифесты
 
-   <p align="center">
-  		<img src="./root-dock.png" alt="Результат выполнения команды из корня" width="600"/>
-   </p>
+## Быстрый старт
 
-2.1 Команду 
+**Требования:** Docker + Docker Compose
+
 ```bash
-docker-compose logs -f policy-engine
-```
-**не вводить, будет ошибка**: причина проста, надо настраивать Prisma7 - очень капризная. Что бы не пладить "кастыли" пока можете запустить локально через команду описанную ниже, а я пока приведу в порядок конфликт по logs
+# 1. Скопировать .env.example в .env и заполнить значения
+cp .env.example .env
 
-
-3. ```bash
-   npm run start:dev
-   ```
-   Запуск сервиса локально, только самого сервиса без запуска Docker
-   
-   **результат выполненя локальной команды из корня сервиса**
-   
-   <p align="center">
-  		<img src="./lockal-service.png" alt="Результат выполнения команды из корня сервиса" width="600"/>
-   </p>
-
-4. **Запуск Unit-тестов**
-
-   ```bash
-	npm test
-	```
-
-4.1 **Запустить в watch-режиме**
-```bash
-npm run test:watch
+# 2. Поднять весь стек (Postgres + Redis + RabbitMQ + сервис)
+docker-compose up -d --build
 ```
 
-4.2 **Запустить конкретный файл**
+**Локальный запуск без Docker:**
+
 ```bash
-npx jest src/message/message.service.spec.ts
+npm run start:dev
 ```
 
-**результат выполненя локальной команды из корня сервиса по тестированию**
-   
-   <p align="center">
-  		<img src="./tests-unit.png" alt="Результат выполнения команды из корня сервиса" width="600"/>
-   </p>
-Красная строка в логах — это не ошибка теста, а ожидаемый лог от одного из тестов, который специально проверяет обработку некорректной таймзоны:
-<br/>
+## Тесты
 
-> ERROR [MessageService] Ошибка парсинга таймзоны для региона Invalid/Timezone
-<br/>
-Это тест "Должен обработать ошибку таймзоны и очистить ключ идемпотентности" — он специально передаёт Invalid/Timezone и проверяет, что сервис корректно обрабатывает эту ошибку. Всё работает как задумано!
-<br/>
+```bash
+npm test                 # все unit-тесты
+npm run test:watch       # watch-режим
+npx jest src/message/message.service.spec.ts   # конкретный файл
+```
 
-> Test Suites: 3 passed, 3 total<br/>
-> Tests:       15 passed, 15 total<br/>
+## Структура
 
+```text
+apps/policy-engine/
+├── src/
+│   ├── message/                 # модуль сообщений (контроллер + сервис)
+│   ├── app.module.ts
+│   └── main.ts
+├── provider/
+│   ├── rabbitmq/                # интеграция с RabbitMQ
+│   └── redis/                   # идемпотентность через Redis
+├── prisma/
+│   ├── schema.prisma
+│   └── migrations/
+├── Dockerfile
+└── test/                        # e2e
+docker-compose.yml
+k8s/                             # deployment / service / configmap
+```
 
+## Known issues
 
+- `docker-compose logs -f policy-engine` временно падает из-за конфликта с Prisma 7 — до настройки логов используйте локальный запуск (`npm run start:dev`).
 
+Полное ТЗ — в [`REQUIREMENTS.md`](REQUIREMENTS.md).
